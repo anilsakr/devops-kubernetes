@@ -12,9 +12,13 @@ spec:
    metadata:
       labels:
         app: sample-springboot-app
+      annotations:                               ### here
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /internal/metrics
    spec:
      containers:
-     - image: sample-app:latest
+     - image: anilsakr/springboot-kubenetes
        name: springboot-chat
        imagePullPolicy: IfNotPresent
        ports:
@@ -23,15 +27,34 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+           prometheus.io/scrape: 'true'
+           filter.by.port.name: 'true'
   name: sample-springboot-app-svc
 spec:
     ports:
-    - name: "sample-springboot-app"
+    - name: sample-springboot-app
       targetPort: 8080
       port: 8080
       nodePort: 30205
       protocol: TCP
     selector:
       app: sample-springboot-app
-    type: NodePort
+    type: LoadBalancer
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: sample-springboot-app
+  labels:
+    release: prometheus-operator
+spec:
+  selector:
+    matchLabels:
+      app: sample-springboot-app
+  endpoints:
+  - port: api
+    path: '/actuator/prometheus'
+    interval: 10s
+    honorLabels: true
 
